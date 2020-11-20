@@ -10,8 +10,12 @@ import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
+import android.os.StrictMode
 import android.speech.RecognizerIntent
 import android.text.style.StyleSpan
 import android.view.LayoutInflater
@@ -19,6 +23,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStub
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.view.accessibility.AccessibilityEvent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.appcompat.content.res.AppCompatResources
@@ -27,12 +33,14 @@ import androidx.constraintlayout.widget.ConstraintProperties.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintProperties.TOP
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import kotlinx.android.synthetic.main.fragment_search_dialog.*
 import kotlinx.android.synthetic.main.fragment_search_dialog.view.*
 import kotlinx.android.synthetic.main.search_suggestions_hint.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.concept.storage.HistoryStorage
 import mozilla.components.feature.qr.QrFeature
@@ -178,6 +186,15 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
 
         requireComponents.core.engine.speculativeCreateSession(isPrivate)
 
+        if (findNavController().previousBackStackEntry?.destination?.id == R.id.homeFragment) {
+            // When displayed above home, dispatches the touch events to scrim area to the HomeFragment
+            view.search_wrapper.background = ColorDrawable(Color.TRANSPARENT)
+            dialog?.window?.decorView?.setOnTouchListener { _, event ->
+                requireActivity().dispatchTouchEvent(event)
+                false
+            }
+        }
+
         return view
     }
 
@@ -188,9 +205,12 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
 
         setupConstraints(view)
 
-        search_wrapper.setOnClickListener {
-            it.hideKeyboardAndSave()
-            dismissAllowingStateLoss()
+        // When displayed above browser, dismisses dialog on clicking scrim area
+        if (findNavController().previousBackStackEntry?.destination?.id == R.id.browserFragment) {
+            search_wrapper.setOnClickListener {
+                it.hideKeyboardAndSave()
+                dismissAllowingStateLoss()
+            }
         }
 
         view.search_engines_shortcut_button.setOnClickListener {
@@ -211,11 +231,9 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             toolbarView.view.clearFocus()
 
             if (requireContext().settings().shouldShowCameraPermissionPrompt) {
-                requireComponents.analytics.metrics.track(Event.QRScannerOpened)
                 qrFeature.get()?.scan(R.id.search_wrapper)
             } else {
                 if (requireContext().isPermissionGranted(Manifest.permission.CAMERA)) {
-                    requireComponents.analytics.metrics.track(Event.QRScannerOpened)
                     qrFeature.get()?.scan(R.id.search_wrapper)
                 } else {
                     interactor.onCameraPermissionsNeeded()
@@ -277,6 +295,9 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
 
         view.search_suggestions_hint.setOnInflateListener((stubListener))
+        if (view.context.settings().accessibilityServicesEnabled) {
+            updateAccessibilityTraversalOrder()
+        }
 
         consumeFrom(store) {
             val shouldShowAwesomebar =
@@ -295,6 +316,19 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
     }
 
+    private fun updateAccessibilityTraversalOrder() {
+        val searchWrapperId = search_wrapper.id
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            qr_scan_button.accessibilityTraversalAfter = searchWrapperId
+            search_engines_shortcut_button.accessibilityTraversalAfter = searchWrapperId
+            fill_link_from_clipboard.accessibilityTraversalAfter = searchWrapperId
+        } else {
+            viewLifecycleOwner.lifecycleScope.launch {
+                search_wrapper.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED)
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         resetFocus()
@@ -306,6 +340,21 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         qr_scan_button.isChecked = false
         view?.hideKeyboard()
         toolbarView.view.requestFocus()
+    }
+
+    /*
+     * This way of dismissing the keyboard is needed to smoothly dismiss the keyboard while the dialog
+     * is also dismissing. For example, when clicking a top site on home while this dialog is showing.
+     */
+    private fun hideDeviceKeyboard() {
+        val imm =
+            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, 0)
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        hideDeviceKeyboard()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
@@ -356,11 +405,9 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                         )
                         setMessage(spannable)
                         setNegativeButton(R.string.qr_scanner_dialog_negative) { dialog: DialogInterface, _ ->
-                            requireComponents.analytics.metrics.track(Event.QRScannerNavigationDenied)
                             dialog.cancel()
                         }
                         setPositiveButton(R.string.qr_scanner_dialog_positive) { dialog: DialogInterface, _ ->
-                            requireComponents.analytics.metrics.track(Event.QRScannerNavigationAllowed)
                             (activity as HomeActivity)
                                 .openToBrowserAndLoad(
                                     searchTermOrURL = result,
@@ -371,7 +418,6 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                         }
                         create()
                     }.show()
-                    requireComponents.analytics.metrics.track(Event.QRScannerPromptDisplayed)
                 }
             }
         )
@@ -470,11 +516,13 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
     private fun isSpeechAvailable(): Boolean = speechIntent.resolveActivity(requireContext().packageManager) != null
 
     private fun setShortcutsChangedListener(preferenceFileName: String) {
-        requireContext().getSharedPreferences(
-            preferenceFileName,
-            Context.MODE_PRIVATE
-        ).registerOnSharedPreferenceChangeListener(viewLifecycleOwner) { _, _ ->
-            awesomeBarView.update(store.state)
+        requireComponents.strictMode.resetAfter(StrictMode.allowThreadDiskReads()) {
+            requireContext().getSharedPreferences(
+                preferenceFileName,
+                Context.MODE_PRIVATE
+            ).registerOnSharedPreferenceChangeListener(viewLifecycleOwner) { _, _ ->
+                awesomeBarView.update(store.state)
+            }
         }
     }
 
@@ -483,8 +531,14 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                 searchState.query.isEmpty() &&
                 !clipboardUrl.isNullOrEmpty()
 
-        fill_link_from_clipboard.visibility = if (shouldShowView) View.VISIBLE else View.GONE
+        fill_link_from_clipboard.isVisible = shouldShowView
+        clipboard_url.isVisible = shouldShowView
+        clipboard_title.isVisible = shouldShowView
+        link_icon.isVisible = shouldShowView
+
         clipboard_url.text = clipboardUrl
+
+        fill_link_from_clipboard.contentDescription = "${clipboard_title.text}, ${clipboard_url.text}."
 
         if (clipboardUrl != null && !((activity as HomeActivity).browsingModeManager.mode.isPrivate)) {
             requireComponents.core.engine.speculativeConnect(clipboardUrl)

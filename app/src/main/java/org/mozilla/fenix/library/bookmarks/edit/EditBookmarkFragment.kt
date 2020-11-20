@@ -19,7 +19,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.findNavController
@@ -57,9 +56,7 @@ import org.mozilla.fenix.library.bookmarks.friendlyRootTitle
 class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
 
     private val args by navArgs<EditBookmarkFragmentArgs>()
-    private val sharedViewModel: BookmarksSharedViewModel by activityViewModels {
-        ViewModelProvider.NewInstanceFactory() // this is a workaround for #4652
-    }
+    private val sharedViewModel: BookmarksSharedViewModel by activityViewModels()
     private var bookmarkNode: BookmarkNode? = null
     private var bookmarkParent: BookmarkNode? = null
     private var initialParentGuid: String? = null
@@ -98,6 +95,7 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
             when (bookmarkNode?.type) {
                 BookmarkNodeType.FOLDER -> {
                     activity?.title = getString(R.string.edit_bookmark_folder_fragment_title)
+                    inputLayoutBookmarkUrl.visibility = View.GONE
                     bookmarkUrlEdit.visibility = View.GONE
                     bookmarkUrlLabel.visibility = View.GONE
                 }

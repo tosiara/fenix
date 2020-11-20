@@ -4,6 +4,9 @@
 
 package org.mozilla.fenix.home.sessioncontrol
 
+import android.view.LayoutInflater
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +18,7 @@ import mozilla.components.feature.tab.collections.TabCollection
 import mozilla.components.feature.tab.collections.ext.restore
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.top.sites.TopSite
+import mozilla.components.support.ktx.android.view.showKeyboard
 import mozilla.components.support.ktx.kotlin.isUrl
 import org.mozilla.fenix.BrowserDirection
 import org.mozilla.fenix.HomeActivity
@@ -30,7 +34,6 @@ import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.metrics
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.sessionsOfType
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.home.HomeFragment
 import org.mozilla.fenix.home.HomeFragmentAction
 import org.mozilla.fenix.home.HomeFragmentDirections
@@ -84,6 +87,11 @@ interface SessionControlController {
      * @see [TabSessionInteractor.onPrivateBrowsingLearnMoreClicked]
      */
     fun handlePrivateBrowsingLearnMoreClicked()
+
+    /**
+     * @see [TopSiteInteractor.onRenameTopSiteClicked]
+     */
+    fun handleRenameTopSiteClicked(topSite: TopSite)
 
     /**
      * @see [TopSiteInteractor.onRemoveTopSiteClicked]
@@ -149,6 +157,11 @@ interface SessionControlController {
      * @see [CollectionInteractor.onRemoveCollectionsPlaceholder]
      */
     fun handleRemoveCollectionsPlaceholder()
+
+    /**
+     * @see [CollectionInteractor.onCollectionMenuOpened] and [TopSiteInteractor.onTopSiteMenuOpened]
+     */
+    fun handleMenuOpened()
 }
 
 @Suppress("TooManyFunctions", "LargeClass")
@@ -184,7 +197,12 @@ class DefaultSessionControlController(
         )
     }
 
+    override fun handleMenuOpened() {
+        dismissSearchDialogIfDisplayed()
+    }
+
     override fun handleCollectionOpenTabClicked(tab: ComponentTab) {
+        dismissSearchDialogIfDisplayed()
         sessionManager.restore(
             activity,
             engine,
@@ -247,6 +265,7 @@ class DefaultSessionControlController(
     }
 
     override fun handleCollectionShareTabsClicked(collection: TabCollection) {
+        dismissSearchDialogIfDisplayed()
         showShareFragment(
             collection.title,
             collection.tabs.map { ShareData(url = it.url, title = it.title) }
@@ -273,12 +292,45 @@ class DefaultSessionControlController(
     }
 
     override fun handlePrivateBrowsingLearnMoreClicked() {
+        dismissSearchDialogIfDisplayed()
         activity.openToBrowserAndLoad(
             searchTermOrURL = SupportUtils.getGenericSumoURLForTopic
                 (SupportUtils.SumoTopic.PRIVATE_BROWSING_MYTHS),
             newTab = true,
             from = BrowserDirection.FromHome
         )
+    }
+
+    override fun handleRenameTopSiteClicked(topSite: TopSite) {
+        activity.let {
+            val customLayout =
+                LayoutInflater.from(it).inflate(R.layout.top_sites_rename_dialog, null)
+            val topSiteLabelEditText: EditText =
+                customLayout.findViewById(R.id.top_site_title)
+            topSiteLabelEditText.setText(topSite.title)
+
+            AlertDialog.Builder(it).apply {
+                setTitle(R.string.rename_top_site)
+                setView(customLayout)
+                setPositiveButton(R.string.top_sites_rename_dialog_ok) { dialog, _ ->
+                    val newTitle = topSiteLabelEditText.text.toString()
+                    if (newTitle.isNotBlank()) {
+                        viewLifecycleScope.launch(Dispatchers.IO) {
+                            with(activity.components.useCases.topSitesUseCase) {
+                                renameTopSites(topSite, newTitle)
+                            }
+                        }
+                    }
+                    dialog.dismiss()
+                }
+                setNegativeButton(R.string.top_sites_rename_dialog_cancel) { dialog, _ ->
+                    dialog.cancel()
+                }
+            }.show().also {
+                topSiteLabelEditText.setSelection(0, topSiteLabelEditText.text.length)
+                topSiteLabelEditText.showKeyboard()
+            }
+        }
     }
 
     override fun handleRemoveTopSiteClicked(topSite: TopSite) {
@@ -303,6 +355,7 @@ class DefaultSessionControlController(
     }
 
     override fun handleSelectTopSite(url: String, type: TopSite.Type) {
+        dismissSearchDialogIfDisplayed()
         metrics.track(Event.TopSiteOpenInNewTab)
         when (type) {
             TopSite.Type.DEFAULT -> metrics.track(Event.TopSiteOpenDefault)
@@ -319,6 +372,12 @@ class DefaultSessionControlController(
             startLoading = true
         )
         activity.openToBrowser(BrowserDirection.FromHome)
+    }
+
+    private fun dismissSearchDialogIfDisplayed() {
+        if (navController.currentDestination?.id == R.id.searchDialogFragment) {
+            navController.navigateUp()
+        }
     }
 
     override fun handleStartBrowsingClicked() {
@@ -414,7 +473,6 @@ class DefaultSessionControlController(
             Event.EnteredUrl(false)
         } else {
             val searchAccessPoint = Event.PerformedSearch.SearchAccessPoint.ACTION
-            activity.settings().incrementActiveSearchCount()
             searchAccessPoint.let { sap ->
                 MetricsUtils.createSearchEvent(
                     activity.components.search.provider.getDefaultEngine(activity),

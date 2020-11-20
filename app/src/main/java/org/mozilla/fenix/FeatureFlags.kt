@@ -22,11 +22,6 @@ object FeatureFlags {
     val syncedTabsInTabsTray = Config.channel.isNightlyOrDebug
 
     /**
-     * Shows the grid view settings for the tabs tray.
-     */
-    val showGridViewInTabsSettings = Config.channel.isNightlyOrDebug
-
-    /**
      * Enables downloads with external download managers.
      */
     const val externalDownloadManager = true
@@ -42,7 +37,8 @@ object FeatureFlags {
     val etpCookiePurging = Config.channel.isNightlyOrDebug
 
     /**
-     * Returns user to browser on cold start if they have open tabs
+     * Enables the Nimbus experiments library, especially the settings toggle to opt-out of
+     * all experiments.
      */
-    val returnToBrowserOnColdStart = Config.channel.isNightlyOrDebug
+    val nimbusExperiments = Config.channel.isNightlyOrDebug
 }
