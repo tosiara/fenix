@@ -155,8 +155,6 @@
     <string name="browser_menu_find_in_page">Ҷустуҷӯ дар саҳифа</string>
     <!-- Browser menu button that creates a private tab -->
     <string name="browser_menu_private_tab">Варақаи махфӣ</string>
-    <!-- Browser menu button that creates a new tab -->
-    <string name="browser_menu_new_tab">Варақаи нав</string>
     <!-- Browser menu button that saves the current tab to a collection -->
     <string name="browser_menu_save_to_collection_2">Нигоҳ доштан дар маҷмӯа</string>
     <!-- Browser menu button that open a share menu to share the current site -->
@@ -361,6 +359,12 @@
     <!-- Toast shown after confirming the custom add-on collection configuration -->
     <string name="toast_customize_addon_collection_done">Маҷмӯаи ҷузъҳои иловагӣ тағйир ёфт. Барои татбиқ кардани тағйирот барнома бояд хомӯш карда шавад…</string>
 
+    <!-- Add-on Installation from AMO-->
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is not supported -->
+    <string name="addon_not_supported_error">Ҷузъи иловагӣ дастгирӣ намешавад</string>
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is already installed -->
+    <string name="addon_already_installed">Ҷузъи иловагӣ аллакай насб карда шуд</string>
+
     <!-- Account Preferences -->
     <!-- Preference for triggering sync -->
     <string name="preferences_sync_now">Ҳозир ҳамоҳанг кунед</string>
@@ -440,6 +444,10 @@
     <string name="preferences_marketing_data">Маълумоти маркетингӣ</string>
     <!-- Preference description for marketing data collection, parameter is the app name (e.g. Firefox) -->
     <string name="preferences_marketing_data_description">Маълумот дар бораи хусусиятҳое, ки шумо дар %1$s истифода мебаред бо Leanplum, яъне фурӯшандаи маркетинги мобилии мо, мубодила карда шавад</string>
+    <!-- Title for studies preferences -->
+    <string name="preference_experiments_2">Таҳқиқҳо</string>
+    <!-- Summary for studies preferences -->
+    <string name="preference_experiments_summary_2">Ба Mozilla иҷозат медиҳад, ки таҳқиқҳоро насб ва иҷро кунад</string>
     <!-- Title for experiments preferences -->
     <string name="preference_experiments">Таҷрибаҳо</string>
     <!-- Summary for experiments preferences -->
@@ -591,6 +599,8 @@
     <string name="tab_tray_title">Варақаҳои кушодашуда</string>
     <!-- Text shown in the menu for saving tabs to a collection -->
     <string name="tab_tray_menu_item_save">Нигоҳ доштан дар маҷмӯа</string>
+    <!-- Text shown in the menu for the collection selector -->
+    <string name="tab_tray_menu_select">Интихоб кардан</string>
     <!-- Text shown in the menu for sharing all tabs -->
     <string name="tab_tray_menu_item_share">Мубодила кардани ҳамаи варақаҳо</string>
     <!-- Text shown in the menu to view recently closed tabs -->
@@ -709,10 +719,12 @@
     <string name="download_delete_all">Нест кардани богириҳо</string>
     <!-- Text for the dialog to confirm clearing all downloads -->
     <string name="download_delete_all_dialog">Шумо мутмаин ҳастед, ки мехоҳед боргириҳои худро нест намоед?</string>
-    <!-- Text for the snackbar to confirm that multiple downloads items have been deleted -->
-    <string name="download_delete_multiple_items_snackbar">Боргириҳо нест карда шуданд</string>
+    <!-- Text for the snackbar to confirm that multiple downloads items have been removed -->
+    <string name="download_delete_multiple_items_snackbar_1">Боргириҳо тоза шуданд</string>
+    <!-- Text for the snackbar to confirm that a single download item has been removed. The first parameter is the name of the download item. -->
+    <string name="download_delete_single_item_snackbar">Файли %1$s тоза шуд</string>
     <!-- Text shown when no download exists -->
-    <string name="download_empty_message">Ягон боргирӣ нест</string>
+    <string name="download_empty_message_1">Ягон файли боргиришуда нест</string>
     <!-- History multi select title in app bar
     The first parameter is the number of downloads selected -->
     <string name="download_multi_select_title">%1$d интихоб шуд</string>
@@ -720,8 +732,10 @@
 
     <!-- History overflow menu open in new tab button -->
     <string name="download_menu_open">Кушодан</string>
-    <!-- Text for the button to delete a single history item -->
-    <string name="download_delete_item">Нест кардан</string>
+
+
+    <!-- Text for the button to remove a single download item -->
+    <string name="download_delete_item_1">Тоза кардан</string>
 
 
     <!-- Crashes -->
@@ -849,6 +863,8 @@
     <string name="preference_phone_feature_notification">Огоҳинома</string>
     <!-- Preference for altering the persistent storage access for all websites -->
     <string name="preference_phone_feature_persistent_storage">Захирагоҳи доимӣ</string>
+    <!-- Preference for altering the EME access for all websites -->
+    <string name="preference_phone_feature_media_key_system_access">Муҳтавои идорашавандаи DRM</string>
     <!-- Label that indicates that a permission must be asked always -->
     <string name="preference_option_phone_feature_ask_to_allow">Дархости иҷозат</string>
     <!-- Label that indicates that a permission must be blocked -->

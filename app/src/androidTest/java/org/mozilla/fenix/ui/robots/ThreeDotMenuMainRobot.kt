@@ -37,6 +37,7 @@ import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import org.hamcrest.Matcher
 import org.hamcrest.Matchers.allOf
+import org.junit.Assert.assertTrue
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.click
@@ -115,7 +116,6 @@ class ThreeDotMenuMainRobot {
     fun verifyAddFirefoxHome() = assertAddToFirefoxHome()
     fun verifyAddToMobileHome() = assertAddToMobileHome()
     fun verifyDesktopSite() = assertDesktopSite()
-    fun verifyOpenInAppButton() = assertOpenInAppButton()
     fun verifyDownloadsButton() = assertDownloadsButton()
 
     fun verifyThreeDotMainMenuItems() {
@@ -151,6 +151,14 @@ class ThreeDotMenuMainRobot {
             return SettingsRobot.Transition()
         }
 
+        fun openDownloadsManager(interact: DownloadRobot.() -> Unit): DownloadRobot.Transition {
+            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(swipeDown())
+            downloadsButton().click()
+
+            DownloadRobot().interact()
+            return DownloadRobot.Transition()
+        }
+
         fun openSyncedTabs(interact: SyncedTabsRobot.() -> Unit): SyncedTabsRobot.Transition {
             onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(ViewActions.swipeDown())
             mDevice.waitNotNull(Until.findObject(By.text("Synced tabs")), waitingTime)
@@ -161,9 +169,11 @@ class ThreeDotMenuMainRobot {
         }
 
         fun openBookmarks(interact: BookmarksRobot.() -> Unit): BookmarksRobot.Transition {
-            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(ViewActions.swipeDown())
-            mDevice.findObject(UiSelector().resourceId("R.id.bookmark_list")).waitForExists(waitingTime)
+            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(swipeDown())
+            mDevice.waitNotNull(Until.findObject(By.text("Bookmarks")), waitingTime)
+
             bookmarksButton().click()
+            assertTrue(mDevice.findObject(UiSelector().resourceId("org.mozilla.fenix.debug:id/bookmark_list")).waitForExists(waitingTime))
 
             BookmarksRobot().interact()
             return BookmarksRobot.Transition()
@@ -250,6 +260,13 @@ class ThreeDotMenuMainRobot {
 
             HomeScreenRobot().interact()
             return HomeScreenRobot.Transition()
+        }
+
+        fun openReportSiteIssue(interact: BrowserRobot.() -> Unit): BrowserRobot.Transition {
+            reportSiteIssueButton().click()
+
+            BrowserRobot().interact()
+            return BrowserRobot.Transition()
         }
 
         fun openFindInPage(interact: FindInPageRobot.() -> Unit): FindInPageRobot.Transition {
@@ -445,6 +462,8 @@ private fun collectionNameTextField() =
 private fun assertCollectionNameTextField() = collectionNameTextField()
     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
 
+private fun reportSiteIssueButton() = onView(withText("Report Site Issue…"))
+
 private fun findInPageButton() = onView(allOf(withText("Find in page")))
 private fun assertFindInPageButton() = findInPageButton()
 
@@ -517,17 +536,6 @@ private fun desktopSiteButton() =
 private fun assertDesktopSite() {
     onView(withId(R.id.mozac_browser_menu_menuView)).perform(swipeUp())
     desktopSiteButton().check(matches(isDisplayed()))
-}
-
-private fun openInAppButton() =
-    onView(allOf(withText(R.string.browser_menu_open_app_link)))
-private fun assertOpenInAppButton() {
-    onView(withId(R.id.mozac_browser_menu_recyclerView))
-        .perform(
-            RecyclerViewActions.scrollTo<RecyclerView.ViewHolder>(
-                hasDescendant(withText(R.string.browser_menu_open_app_link))
-            )
-        ).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
 }
 
 private fun downloadsButton() = onView(withText(R.string.library_downloads))

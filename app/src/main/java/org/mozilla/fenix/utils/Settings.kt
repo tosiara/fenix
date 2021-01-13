@@ -326,7 +326,7 @@ class Settings(private val appContext: Context) : PreferencesHolder {
         closeTabsAfterOneDay -> ONE_DAY_MS
         closeTabsAfterOneWeek -> ONE_WEEK_MS
         closeTabsAfterOneMonth -> ONE_MONTH_MS
-        else -> System.currentTimeMillis()
+        else -> Long.MAX_VALUE
     }
 
     enum class TabView {
@@ -463,6 +463,11 @@ class Settings(private val appContext: Context) : PreferencesHolder {
 
     val blockFingerprintersInCustomTrackingProtection by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_tracking_protection_custom_fingerprinters),
+        true
+    )
+
+    val blockRedirectTrackersInCustomTrackingProtection by booleanPreference(
+        appContext.getPreferenceKey(R.string.pref_key_tracking_protection_redirect_trackers),
         true
     )
 
@@ -746,7 +751,8 @@ class Settings(private val appContext: Context) : PreferencesHolder {
             camera = getSitePermissionsPhoneFeatureAction(PhoneFeature.CAMERA),
             autoplayAudible = getSitePermissionsPhoneFeatureAutoplayAction(PhoneFeature.AUTOPLAY_AUDIBLE),
             autoplayInaudible = getSitePermissionsPhoneFeatureAutoplayAction(PhoneFeature.AUTOPLAY_INAUDIBLE),
-            persistentStorage = getSitePermissionsPhoneFeatureAction(PhoneFeature.PERSISTENT_STORAGE)
+            persistentStorage = getSitePermissionsPhoneFeatureAction(PhoneFeature.PERSISTENT_STORAGE),
+            mediaKeySystemAccess = getSitePermissionsPhoneFeatureAction(PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS)
         )
     }
 
@@ -757,7 +763,9 @@ class Settings(private val appContext: Context) : PreferencesHolder {
             PhoneFeature.LOCATION,
             PhoneFeature.CAMERA,
             PhoneFeature.AUTOPLAY_AUDIBLE,
-            PhoneFeature.AUTOPLAY_INAUDIBLE
+            PhoneFeature.AUTOPLAY_INAUDIBLE,
+            PhoneFeature.PERSISTENT_STORAGE,
+            PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS
         ).map { it.getPreferenceKey(appContext) }
 
         preferences.registerOnSharedPreferenceChangeListener(lifecycleOwner) { _, key ->
@@ -829,7 +837,7 @@ class Settings(private val appContext: Context) : PreferencesHolder {
 
     fun incrementNumTimesPrivateModeOpened() = numTimesPrivateModeOpened.increment()
 
-    private var showedPrivateModeContextualFeatureRecommender by booleanPreference(
+    var showedPrivateModeContextualFeatureRecommender by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_showed_private_mode_cfr),
         default = false
     )
@@ -838,7 +846,7 @@ class Settings(private val appContext: Context) : PreferencesHolder {
         appContext.getPreferenceKey(R.string.pref_key_private_mode_opened)
     )
 
-    val showPrivateModeCfr: Boolean
+    val shouldShowPrivateModeCfr: Boolean
         get() {
             if (!canShowCfr) return false
             val focusInstalled = MozillaProductDetector
@@ -846,13 +854,12 @@ class Settings(private val appContext: Context) : PreferencesHolder {
                 .contains(MozillaProductDetector.MozillaProducts.FOCUS.productName)
 
             val showCondition = if (focusInstalled) {
-                numTimesPrivateModeOpened.value == CFR_COUNT_CONDITION_FOCUS_INSTALLED
+                numTimesPrivateModeOpened.value >= CFR_COUNT_CONDITION_FOCUS_INSTALLED
             } else {
-                numTimesPrivateModeOpened.value == CFR_COUNT_CONDITION_FOCUS_NOT_INSTALLED
+                numTimesPrivateModeOpened.value >= CFR_COUNT_CONDITION_FOCUS_NOT_INSTALLED
             }
 
             if (showCondition && !showedPrivateModeContextualFeatureRecommender) {
-                showedPrivateModeContextualFeatureRecommender = true
                 return true
             }
 
@@ -900,6 +907,16 @@ class Settings(private val appContext: Context) : PreferencesHolder {
 
     var openTabsCount by intPreference(
         appContext.getPreferenceKey(R.string.pref_key_open_tabs_count),
+        0
+    )
+
+    var mobileBookmarksSize by intPreference(
+        appContext.getPreferenceKey(R.string.pref_key_mobile_bookmarks_size),
+        0
+    )
+
+    var desktopBookmarksSize by intPreference(
+        appContext.getPreferenceKey(R.string.pref_key_desktop_bookmarks_size),
         0
     )
 

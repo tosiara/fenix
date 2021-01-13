@@ -27,18 +27,26 @@ object FeatureFlags {
     const val externalDownloadManager = true
 
     /**
-     * Enables swipe to delete in bookmarks
-     */
-    val bookmarkSwipeToDelete = Config.channel.isNightlyOrDebug
-
-    /**
-     * Enables ETP cookie purging
-     */
-    val etpCookiePurging = Config.channel.isNightlyOrDebug
-
-    /**
      * Enables the Nimbus experiments library, especially the settings toggle to opt-out of
      * all experiments.
      */
-    val nimbusExperiments = Config.channel.isNightlyOrDebug
+    // IMPORTANT: Only turn this back on once the following issues are resolved:
+    // - https://github.com/mozilla-mobile/fenix/issues/17086: Calls to
+    // getExperimentBranch seem to block on updateExperiments causing a
+    // large performance regression loading the home screen.
+    // - https://github.com/mozilla-mobile/fenix/issues/17143: Despite
+    // having wrapped getExperimentBranch/withExperiments in a catch-all
+    // users are still experiencing crashes.
+    const val nimbusExperiments = false
+
+    /**
+     * Enables the new MediaSession API.
+     */
+    @Suppress("MayBeConst")
+    val newMediaSessionApi = true
+
+    /**
+     * Enabled showing site permission indicators in the toolbars.
+     */
+    val permissionIndicatorsToolbar = Config.channel.isNightlyOrDebug
 }

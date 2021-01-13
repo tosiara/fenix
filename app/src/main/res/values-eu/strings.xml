@@ -156,8 +156,6 @@
     <string name="browser_menu_find_in_page">Bilatu orrian</string>
     <!-- Browser menu button that creates a private tab -->
     <string name="browser_menu_private_tab">Fitxa pribatua</string>
-    <!-- Browser menu button that creates a new tab -->
-    <string name="browser_menu_new_tab">Fitxa berria</string>
     <!-- Browser menu button that saves the current tab to a collection -->
     <string name="browser_menu_save_to_collection_2">Gorde bilduman</string>
 
@@ -369,6 +367,12 @@
     <!-- Toast shown after confirming the custom add-on collection configuration -->
     <string name="toast_customize_addon_collection_done">Gehigarrien bilduma aldatu egin da. Aplikaziotik irteten aldaketak aplikatzeko…</string>
 
+    <!-- Add-on Installation from AMO-->
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is not supported -->
+    <string name="addon_not_supported_error">Gehigarria ez da onartzen</string>
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is already installed -->
+    <string name="addon_already_installed">Gehigarria instalatuta dago jada</string>
+
     <!-- Account Preferences -->
     <!-- Preference for triggering sync -->
     <string name="preferences_sync_now">Sinkronizatu orain</string>
@@ -451,6 +455,10 @@
     <string name="preferences_marketing_data">Marketing datuak</string>
     <!-- Preference description for marketing data collection, parameter is the app name (e.g. Firefox) -->
     <string name="preferences_marketing_data_description">%1$s(r)en erabiltzen dituzun eginbideei buruzko datuak partekatzen ditu Leanplum-ekin, mugikorrerako gure marketing hornitzailearekin.</string>
+    <!-- Title for studies preferences -->
+    <string name="preference_experiments_2">Esperimentuak</string>
+    <!-- Summary for studies preferences -->
+    <string name="preference_experiments_summary_2">Mozillari esperimentuak instalatu eta exekutatzea baimentzen du</string>
     <!-- Title for experiments preferences -->
     <string name="preference_experiments">Esperimentuak</string>
     <!-- Summary for experiments preferences -->
@@ -726,10 +734,12 @@
     <string name="download_delete_all">Ezabatu deskargak</string>
     <!-- Text for the dialog to confirm clearing all downloads -->
     <string name="download_delete_all_dialog">Ziur zaude zure deskargak garbitu nahi dituzula?</string>
-    <!-- Text for the snackbar to confirm that multiple downloads items have been deleted -->
-    <string name="download_delete_multiple_items_snackbar">Deskargak ezabatuta</string>
+    <!-- Text for the snackbar to confirm that multiple downloads items have been removed -->
+    <string name="download_delete_multiple_items_snackbar_1">Deskargak kenduta</string>
+    <!-- Text for the snackbar to confirm that a single download item has been removed. The first parameter is the name of the download item. -->
+    <string name="download_delete_single_item_snackbar">%1$s kenduta</string>
     <!-- Text shown when no download exists -->
-    <string name="download_empty_message">Deskargarik ez hemen</string>
+    <string name="download_empty_message_1">Deskargatutako fitxategirik ez</string>
     <!-- History multi select title in app bar
     The first parameter is the number of downloads selected -->
     <string name="download_multi_select_title">%1$d hautatuta</string>
@@ -737,8 +747,10 @@
 
     <!-- History overflow menu open in new tab button -->
     <string name="download_menu_open">Ireki</string>
-    <!-- Text for the button to delete a single history item -->
-    <string name="download_delete_item">Ezabatu</string>
+
+
+    <!-- Text for the button to remove a single download item -->
+    <string name="download_delete_item_1">Kendu</string>
 
 
     <!-- Crashes -->
@@ -863,6 +875,8 @@
     <string name="preference_phone_feature_notification">Jakinarazpena</string>
     <!-- Preference for altering the persistent storage access for all websites -->
     <string name="preference_phone_feature_persistent_storage">Biltegiratze iraunkorra</string>
+    <!-- Preference for altering the EME access for all websites -->
+    <string name="preference_phone_feature_media_key_system_access">DRM bidez kontrolatutako edukia</string>
     <!-- Label that indicates that a permission must be asked always -->
     <string name="preference_option_phone_feature_ask_to_allow">Galdetu baimentzeko</string>
     <!-- Label that indicates that a permission must be blocked -->

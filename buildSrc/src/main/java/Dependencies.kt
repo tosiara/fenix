@@ -32,7 +32,7 @@ object Versions {
     const val androidx_core = "1.3.2"
     const val androidx_paging = "2.1.0"
     const val androidx_transition = "1.3.0"
-    const val androidx_work = "2.2.0"
+    const val androidx_work = "2.4.0"
     const val google_material = "1.2.1"
 
     const val mozilla_android_components = AndroidComponents.VERSION
@@ -83,6 +83,7 @@ object Deps {
     const val mozilla_browser_icons = "org.mozilla.components:browser-icons:${Versions.mozilla_android_components}"
     const val mozilla_browser_search = "org.mozilla.components:browser-search:${Versions.mozilla_android_components}"
     const val mozilla_browser_session = "org.mozilla.components:browser-session:${Versions.mozilla_android_components}"
+    const val mozilla_browser_session_storage = "org.mozilla.components:browser-session-storage:${Versions.mozilla_android_components}"
     const val mozilla_browser_state = "org.mozilla.components:browser-state:${Versions.mozilla_android_components}"
     const val mozilla_browser_tabstray = "org.mozilla.components:browser-tabstray:${Versions.mozilla_android_components}"
     const val mozilla_browser_thumbnails = "org.mozilla.components:browser-thumbnails:${Versions.mozilla_android_components}"
@@ -139,6 +140,7 @@ object Deps {
     const val mozilla_ui_colors = "org.mozilla.components:ui-colors:${Versions.mozilla_android_components}"
     const val mozilla_ui_icons = "org.mozilla.components:ui-icons:${Versions.mozilla_android_components}"
     const val mozilla_ui_widgets = "org.mozilla.components:ui-widgets:${Versions.mozilla_android_components}"
+    const val mozilla_ui_tabcounter = "org.mozilla.components:ui-tabcounter:${Versions.mozilla_android_components}"
 
     const val mozilla_lib_crash = "org.mozilla.components:lib-crash:${Versions.mozilla_android_components}"
     const val mozilla_lib_push_firebase = "org.mozilla.components:lib-push-firebase:${Versions.mozilla_android_components}"
@@ -153,6 +155,7 @@ object Deps {
     const val mozilla_support_rustlog = "org.mozilla.components:support-rustlog:${Versions.mozilla_android_components}"
     const val mozilla_support_utils = "org.mozilla.components:support-utils:${Versions.mozilla_android_components}"
     const val mozilla_support_test = "org.mozilla.components:support-test:${Versions.mozilla_android_components}"
+    const val mozilla_support_test_libstate = "org.mozilla.components:support-test-libstate:${Versions.mozilla_android_components}"
     const val mozilla_support_migration = "org.mozilla.components:support-migration:${Versions.mozilla_android_components}"
     const val mozilla_support_locale = "org.mozilla.components:support-locale:${Versions.mozilla_android_components}"
 

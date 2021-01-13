@@ -11,6 +11,7 @@ import android.widget.EditText
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.NoMatchingViewException
+import androidx.test.espresso.ViewInteraction
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.longClick
@@ -38,6 +39,7 @@ import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import androidx.test.uiautomator.Until.findObject
 import mozilla.components.support.ktx.android.content.appName
+import mozilla.components.browser.state.state.searchEngines
 import org.hamcrest.CoreMatchers.allOf
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.instanceOf
@@ -45,7 +47,7 @@ import org.hamcrest.CoreMatchers.not
 import org.hamcrest.Matchers
 import org.junit.Assert
 import org.mozilla.fenix.R
-import org.mozilla.fenix.components.Search
+import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.TestHelper.scrollToElementByText
@@ -393,6 +395,14 @@ class HomeScreenRobot {
             openThreeDotMenu { }.openSettings { }.goBack { }
         }
 
+        fun clickStartBrowsingButton(interact: SearchRobot.() -> Unit): SearchRobot.Transition {
+            scrollToElementByText("Start browsing")
+            startBrowsingButton().click()
+
+            SearchRobot().interact()
+            return SearchRobot.Transition()
+        }
+
         fun togglePrivateBrowsingMode() {
             onView(ViewMatchers.withResourceName("privateBrowsingButton"))
                 .perform(click())
@@ -579,10 +589,11 @@ private fun verifySearchEngineIcon(searchEngineIcon: Bitmap, searchEngineName: S
 }
 
 private fun getSearchEngine(searchEngineName: String) =
-    Search(appContext).searchEngineManager.getDefaultSearchEngine(appContext, searchEngineName)
+    appContext.components.core.store.state.search.searchEngines.find { it.name == searchEngineName }
 
 private fun verifySearchEngineIcon(searchEngineName: String) {
     val ddgSearchEngine = getSearchEngine(searchEngineName)
+        ?: throw AssertionError("No search engine with name $searchEngineName")
     verifySearchEngineIcon(ddgSearchEngine.icon, ddgSearchEngine.name)
 }
 
@@ -806,3 +817,8 @@ private fun tab(title: String) =
             withText(title)
         )
     )
+
+private fun startBrowsingButton(): ViewInteraction {
+    scrollToElementByText("Start browsing")
+    return onView(allOf(withText("Start browsing")))
+}

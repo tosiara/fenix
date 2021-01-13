@@ -21,6 +21,7 @@ import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
 import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.ViewMatchers.withResourceName
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -43,15 +44,17 @@ import org.mozilla.fenix.helpers.ext.waitNotNull
  */
 class NavigationToolbarRobot {
 
-    fun verifySearchSuggestionsAreMoreThan(suggestionSize: Int, searchTerm: String) =
-        assertSuggestionsAreMoreThan(suggestionSize, searchTerm)
+    fun verifySearchSuggestionsAreMoreThan(suggestionSize: Int) =
+        assertSuggestionsAreMoreThan(suggestionSize)
 
-    fun verifySearchSuggestionsAreEqualTo(suggestionSize: Int, searchTerm: String) =
-        assertSuggestionsAreEqualTo(suggestionSize, searchTerm)
+    fun verifySearchSuggestionsAreEqualTo(suggestionSize: Int) =
+        assertSuggestionsAreEqualTo(suggestionSize)
 
     fun verifyNoHistoryBookmarks() = assertNoHistoryBookmarks()
 
     fun verifyTabButtonShortcutMenuItems() = assertTabButtonShortcutMenuItems()
+
+    fun typeSearchTerm(searchTerm: String) = awesomeBar().perform(typeText(searchTerm))
 
     class Transition {
 
@@ -97,8 +100,9 @@ class NavigationToolbarRobot {
             runWithIdleRes(sessionLoadedIdlingResource) {
                 onView(
                     anyOf(
-                        ViewMatchers.withResourceName("browserLayout"),
-                        ViewMatchers.withResourceName("onboarding_message") // Req ETP dialog
+                        withResourceName("browserLayout"),
+                        withResourceName("onboarding_message"), // Req ETP dialog
+                        withResourceName("download_button")
                     )
                 )
                     .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE)))
@@ -246,18 +250,12 @@ fun clickUrlbar(interact: SearchRobot.() -> Unit): SearchRobot.Transition {
     return SearchRobot.Transition()
 }
 
-private fun assertSuggestionsAreEqualTo(suggestionSize: Int, searchTerm: String) {
-    mDevice.waitForIdle()
-    awesomeBar().perform(typeText(searchTerm))
-
+private fun assertSuggestionsAreEqualTo(suggestionSize: Int) {
     mDevice.waitForIdle()
     onView(withId(R.id.awesome_bar)).check(suggestionsAreEqualTo(suggestionSize))
 }
 
-private fun assertSuggestionsAreMoreThan(suggestionSize: Int, searchTerm: String) {
-    mDevice.waitForIdle()
-    awesomeBar().perform(typeText(searchTerm))
-
+private fun assertSuggestionsAreMoreThan(suggestionSize: Int) {
     mDevice.waitForIdle()
     onView(withId(R.id.awesome_bar)).check(suggestionsAreGreaterThan(suggestionSize))
 }

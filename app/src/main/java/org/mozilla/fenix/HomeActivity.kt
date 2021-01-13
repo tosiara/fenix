@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.text.format.DateUtils
 import android.util.AttributeSet
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
@@ -37,15 +38,19 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import mozilla.components.browser.search.SearchEngine
+import mozilla.appservices.places.BookmarkRoot
+import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.state.WebExtensionState
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineView
+import mozilla.components.concept.storage.BookmarkNode
+import mozilla.components.concept.storage.BookmarkNodeType
 import mozilla.components.feature.contextmenu.DefaultSelectionActionDelegate
 import mozilla.components.feature.privatemode.notification.PrivateNotificationFeature
 import mozilla.components.feature.search.BrowserStoreSearchAdapter
+import mozilla.components.feature.search.ext.legacy
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.ktx.android.arch.lifecycle.addObservers
@@ -81,9 +86,11 @@ import org.mozilla.fenix.home.intent.OpenSpecificTabIntentProcessor
 import org.mozilla.fenix.home.intent.SpeechProcessingIntentProcessor
 import org.mozilla.fenix.home.intent.StartSearchIntentProcessor
 import org.mozilla.fenix.library.bookmarks.BookmarkFragmentDirections
+import org.mozilla.fenix.library.bookmarks.DesktopFolders
 import org.mozilla.fenix.library.history.HistoryFragmentDirections
 import org.mozilla.fenix.library.recentlyclosed.RecentlyClosedFragmentDirections
 import org.mozilla.fenix.perf.Performance
+import org.mozilla.fenix.perf.PerformanceInflater
 import org.mozilla.fenix.perf.StartupTimeline
 import org.mozilla.fenix.search.SearchDialogFragmentDirections
 import org.mozilla.fenix.session.PrivateNotificationService
@@ -133,13 +140,15 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         WebExtensionPopupFeature(components.core.store, ::openPopup)
     }
 
+    private var inflater: LayoutInflater? = null
+
     private val navHost by lazy {
         supportFragmentManager.findFragmentById(R.id.container) as NavHostFragment
     }
 
     private val externalSourceIntentProcessors by lazy {
         listOf(
-            SpeechProcessingIntentProcessor(this, components.analytics.metrics),
+            SpeechProcessingIntentProcessor(this, components.core.store, components.analytics.metrics),
             StartSearchIntentProcessor(components.analytics.metrics),
             DeepLinkIntentProcessor(this, components.analytics.leanplumMetricsService),
             OpenBrowserIntentProcessor(this, ::getIntentSessionId),
@@ -236,6 +245,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         captureSnapshotTelemetryMetrics()
 
         startupTelemetryOnCreateCalled(intent.toSafeIntent(), savedInstanceState != null)
+
+        components.core.requestInterceptor.setNavigationController(navHost.navController)
 
         StartupTimeline.onActivityCreateEndHome(this) // DO NOT MOVE ANYTHING BELOW HERE.
     }
@@ -337,6 +348,20 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         // https://github.com/mozilla-mobile/android-components/issues/8679
         settings().topSitesSize = components.core.topSitesStorage.cachedTopSites.size
 
+        lifecycleScope.launch(IO) {
+            components.core.bookmarksStorage.getTree(BookmarkRoot.Root.id, true)?.let {
+                val desktopRootNode = DesktopFolders(
+                    applicationContext,
+                    showMobileRoot = false
+                ).withOptionalDesktopFolders(it)
+                settings().desktopBookmarksSize = getBookmarkCount(desktopRootNode)
+            }
+
+            components.core.bookmarksStorage.getTree(BookmarkRoot.Mobile.id, true)?.let {
+                settings().mobileBookmarksSize = getBookmarkCount(it)
+            }
+        }
+
         super.onPause()
 
         // Diagnostic breadcrumb for "Display already aquired" crash:
@@ -354,6 +379,25 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         //
         // NB: There are ways for the user to install new products without leaving the browser.
         BrowsersCache.resetAll()
+    }
+
+    private fun getBookmarkCount(node: BookmarkNode): Int {
+        val children = node.children
+        return if (children == null) {
+            0
+        } else {
+            var count = 0
+
+            for (child in children) {
+                if (child.type == BookmarkNodeType.FOLDER) {
+                    count += getBookmarkCount(child)
+                } else if (child.type == BookmarkNodeType.ITEM) {
+                    count++
+                }
+            }
+
+            count
+        }
     }
 
     override fun onDestroy() {
@@ -737,23 +781,24 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             }
         } else components.useCases.sessionUseCases.loadUrl
 
-        val searchUseCase: (String) -> Unit = { searchTerms ->
+        // In situations where we want to perform a search but have no search engine (e.g. the user
+        // has removed all of them, or we couldn't load any) we will pass searchTermOrURL to Gecko
+        // and let it try to load whatever was entered.
+        if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
+            loadUrlUseCase.invoke(searchTermOrURL.toNormalizedUrl(), flags)
+        } else {
             if (newTab) {
                 components.useCases.searchUseCases.newTabSearch
                     .invoke(
-                        searchTerms,
+                        searchTermOrURL,
                         SessionState.Source.USER_ENTERED,
                         true,
                         mode.isPrivate,
-                        searchEngine = engine
+                        searchEngine = engine.legacy()
                     )
-            } else components.useCases.searchUseCases.defaultSearch.invoke(searchTerms, engine)
-        }
-
-        if (!forceSearch && searchTermOrURL.isUrl()) {
-            loadUrlUseCase.invoke(searchTermOrURL.toNormalizedUrl(), flags)
-        } else {
-            searchUseCase.invoke(searchTermOrURL)
+            } else {
+                components.useCases.searchUseCases.defaultSearch.invoke(searchTermOrURL, engine.legacy())
+            }
         }
 
         if (components.core.engine.profiler?.isProfilerActive() == true) {
@@ -781,6 +826,16 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         base.components.strictMode.resetAfter(StrictMode.allowThreadDiskReads()) {
             super.attachBaseContext(base)
         }
+    }
+
+    override fun getSystemService(name: String): Any? {
+        if (LAYOUT_INFLATER_SERVICE == name) {
+            if (inflater == null) {
+                inflater = PerformanceInflater(LayoutInflater.from(baseContext), this)
+            }
+            return inflater
+        }
+        return super.getSystemService(name)
     }
 
     protected open fun createBrowsingModeManager(initialMode: BrowsingMode): BrowsingModeManager {

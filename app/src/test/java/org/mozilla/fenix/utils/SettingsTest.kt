@@ -32,7 +32,8 @@ class SettingsTest {
         notification = ASK_TO_ALLOW,
         autoplayAudible = AutoplayAction.BLOCKED,
         autoplayInaudible = AutoplayAction.BLOCKED,
-        persistentStorage = ASK_TO_ALLOW
+        persistentStorage = ASK_TO_ALLOW,
+        mediaKeySystemAccess = ASK_TO_ALLOW
     )
 
     @Before
@@ -235,27 +236,28 @@ class SettingsTest {
         // When just created
         // Then
         assertTrue(settings.manuallyCloseTabs)
+        assertEquals(Long.MAX_VALUE, settings.getTabTimeout())
 
         // When
         settings.manuallyCloseTabs = false
         settings.closeTabsAfterOneDay = true
 
         // Then
-        assertEquals(settings.getTabTimeout(), Settings.ONE_DAY_MS)
+        assertEquals(Settings.ONE_DAY_MS, settings.getTabTimeout())
 
         // When
         settings.closeTabsAfterOneDay = false
         settings.closeTabsAfterOneWeek = true
 
         // Then
-        assertEquals(settings.getTabTimeout(), Settings.ONE_WEEK_MS)
+        assertEquals(Settings.ONE_WEEK_MS, settings.getTabTimeout())
 
         // When
         settings.closeTabsAfterOneWeek = false
         settings.closeTabsAfterOneMonth = true
 
         // Then
-        assertEquals(settings.getTabTimeout(), Settings.ONE_MONTH_MS)
+        assertEquals(Settings.ONE_MONTH_MS, settings.getTabTimeout())
     }
 
     @Test
@@ -604,6 +606,23 @@ class SettingsTest {
 
         assertEquals(
             defaultPermissions.copy(persistentStorage = BLOCKED),
+            settings.getSitePermissionsCustomSettingsRules()
+        )
+    }
+
+    @Test
+    fun getSitePermissionsCustomSettingsRules_mediaKeySystemAccess() {
+        settings.setSitePermissionsPhoneFeatureAction(PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS, ALLOWED)
+
+        assertEquals(
+            defaultPermissions.copy(mediaKeySystemAccess = ALLOWED),
+            settings.getSitePermissionsCustomSettingsRules()
+        )
+
+        settings.setSitePermissionsPhoneFeatureAction(PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS, BLOCKED)
+
+        assertEquals(
+            defaultPermissions.copy(mediaKeySystemAccess = BLOCKED),
             settings.getSitePermissionsCustomSettingsRules()
         )
     }

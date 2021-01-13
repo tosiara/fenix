@@ -54,14 +54,12 @@ class Components(private val context: Context) {
     }
     val services by lazyMonitored { Services(context, backgroundServices.accountManager) }
     val core by lazyMonitored { Core(context, analytics.crashReporter, strictMode) }
-    val search by lazyMonitored { Search(context) }
     val useCases by lazyMonitored {
         UseCases(
             context,
             core.engine,
             core.sessionManager,
             core.store,
-            search.searchEngineManager,
             core.webAppShortcutManager,
             core.topSitesStorage
         )
@@ -70,7 +68,9 @@ class Components(private val context: Context) {
         IntentProcessors(
             context,
             core.sessionManager,
+            core.store,
             useCases.sessionUseCases,
+            useCases.tabsUseCases,
             useCases.searchUseCases,
             core.relationChecker,
             core.customTabsStore,
@@ -117,7 +117,7 @@ class Components(private val context: Context) {
             onNotificationClickIntent = Intent(context, HomeActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                data = "fenix://settings_addon_manager".toUri()
+                data = "${BuildConfig.DEEP_LINK_SCHEME}://settings_addon_manager".toUri()
             }
         )
     }

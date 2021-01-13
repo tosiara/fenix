@@ -19,6 +19,7 @@ import kotlinx.android.synthetic.main.fragment_browser.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.selector.findTab
+import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.thumbnails.BrowserThumbnails
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.feature.app.links.AppLinksUseCases
@@ -30,7 +31,6 @@ import mozilla.components.feature.tabs.WindowFeature
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import org.mozilla.fenix.R
-import org.mozilla.fenix.addons.runIfFragmentIsAttached
 import org.mozilla.fenix.components.FenixSnackbar
 import org.mozilla.fenix.components.TabCollectionStorage
 import org.mozilla.fenix.components.metrics.Event
@@ -39,6 +39,7 @@ import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.navigateSafe
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.ext.settings
+import org.mozilla.fenix.ext.runIfFragmentIsAttached
 import org.mozilla.fenix.shortcut.PwaOnboardingObserver
 import org.mozilla.fenix.trackingprotection.TrackingProtectionOverlay
 
@@ -50,9 +51,11 @@ import org.mozilla.fenix.trackingprotection.TrackingProtectionOverlay
 class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     private val windowFeature = ViewBoundFeatureWrapper<WindowFeature>()
+    private val openInAppOnboardingObserver = ViewBoundFeatureWrapper<OpenInAppOnboardingObserver>()
+    private val trackingProtectionOverlayObserver = ViewBoundFeatureWrapper<TrackingProtectionOverlay>()
 
     private var readerModeAvailable = false
-    private var openInAppOnboardingObserver: OpenInAppOnboardingObserver? = null
+    private var pwaOnboardingObserver: PwaOnboardingObserver? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -140,6 +143,36 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 owner = this,
                 view = view
             )
+
+            if (context.settings().shouldShowOpenInAppCfr) {
+                openInAppOnboardingObserver.set(
+                    feature = OpenInAppOnboardingObserver(
+                        context = context,
+                        store = context.components.core.store,
+                        lifecycleOwner = this,
+                        navController = findNavController(),
+                        settings = context.settings(),
+                        appLinksUseCases = context.components.useCases.appLinksUseCases,
+                        container = browserLayout as ViewGroup
+                    ),
+                    owner = this,
+                    view = view
+                )
+            }
+            if (context.settings().shouldShowTrackingProtectionCfr) {
+                trackingProtectionOverlayObserver.set(
+                    feature = TrackingProtectionOverlay(
+                        context = context,
+                        store = context.components.core.store,
+                        lifecycleOwner = viewLifecycleOwner,
+                        settings = context.settings(),
+                        metrics = context.components.analytics.metrics,
+                        getToolbar = { browserToolbarView.view }
+                    ),
+                    owner = this,
+                    view = view
+                )
+            }
         }
     }
 
@@ -147,42 +180,17 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         super.onStart()
         val context = requireContext()
         val settings = context.settings()
-        val session = getSessionById()
-
-        val toolbarSessionObserver = TrackingProtectionOverlay(
-            context = context,
-            settings = settings,
-            metrics = context.components.analytics.metrics
-        ) {
-            browserToolbarView.view
-        }
-        session?.register(toolbarSessionObserver, viewLifecycleOwner, autoPause = true)
-
-        if (settings.shouldShowOpenInAppCfr && session != null) {
-            openInAppOnboardingObserver = OpenInAppOnboardingObserver(
-                context = context,
-                navController = findNavController(),
-                settings = settings,
-                appLinksUseCases = context.components.useCases.appLinksUseCases,
-                container = browserLayout as ViewGroup
-            )
-            session.register(
-                openInAppOnboardingObserver!!,
-                owner = this,
-                autoPause = true
-            )
-        }
 
         if (!settings.userKnowsAboutPwas) {
-            session?.register(
-                PwaOnboardingObserver(
-                    navController = findNavController(),
-                    settings = settings,
-                    webAppUseCases = context.components.useCases.webAppUseCases
-                ),
-                owner = this,
-                autoPause = true
-            )
+            pwaOnboardingObserver = PwaOnboardingObserver(
+                store = context.components.core.store,
+                lifecycleOwner = this,
+                navController = findNavController(),
+                settings = settings,
+                webAppUseCases = context.components.useCases.webAppUseCases
+            ).also {
+                it.start()
+            }
         }
 
         subscribeToTabCollections()
@@ -190,12 +198,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     override fun onStop() {
         super.onStop()
-        // This observer initialized in onStart has a reference to fragment's view.
-        // Prevent it leaking the view after the latter onDestroyView.
-        if (openInAppOnboardingObserver != null) {
-            getSessionById()?.unregister(openInAppOnboardingObserver!!)
-            openInAppOnboardingObserver = null
-        }
+
+        pwaOnboardingObserver?.stop()
     }
 
     private fun subscribeToTabCollections() {
@@ -247,11 +251,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private val collectionStorageObserver = object : TabCollectionStorage.Observer {
-        override fun onCollectionCreated(title: String, sessions: List<Session>) {
+        override fun onCollectionCreated(title: String, sessions: List<TabSessionState>, id: Long?) {
             showTabSavedToCollectionSnackbar(sessions.size, true)
         }
 
-        override fun onTabsAdded(tabCollection: TabCollection, sessions: List<Session>) {
+        override fun onTabsAdded(tabCollection: TabCollection, sessions: List<TabSessionState>) {
             showTabSavedToCollectionSnackbar(sessions.size)
         }
 

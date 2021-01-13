@@ -5,7 +5,6 @@
 package org.mozilla.fenix.addons
 
 import android.view.View
-import androidx.fragment.app.Fragment
 import org.mozilla.fenix.components.FenixSnackbar
 
 /**
@@ -14,23 +13,12 @@ import org.mozilla.fenix.components.FenixSnackbar
  * @param view A [View] used to determine a parent for the [FenixSnackbar].
  * @param text The text to display in the [FenixSnackbar].
  */
-internal fun showSnackBar(view: View, text: String) {
+internal fun showSnackBar(view: View, text: String, duration: Int = FenixSnackbar.LENGTH_SHORT) {
     FenixSnackbar.make(
         view = view,
-        duration = FenixSnackbar.LENGTH_SHORT,
+        duration = duration,
         isDisplayedWithBrowserToolbar = true
     )
         .setText(text)
         .show()
-}
-
-/**
- * Run the [block] only if the [Fragment] is attached.
- *
- * @param block A callback to be executed if the container [Fragment] is attached.
- */
-internal inline fun Fragment.runIfFragmentIsAttached(block: () -> Unit) {
-    context?.let {
-        block()
-    }
 }

@@ -157,8 +157,6 @@
     <string name="browser_menu_find_in_page">Sykje op side</string>
     <!-- Browser menu button that creates a private tab -->
     <string name="browser_menu_private_tab">Priveeljepblêd</string>
-    <!-- Browser menu button that creates a new tab -->
-    <string name="browser_menu_new_tab">Nij ljepblêd</string>
     <!-- Browser menu button that saves the current tab to a collection -->
     <string name="browser_menu_save_to_collection_2">Yn kolleksje bewarje</string>
     <!-- Browser menu button that open a share menu to share the current site -->
@@ -366,6 +364,12 @@
     <!-- Toast shown after confirming the custom add-on collection configuration -->
     <string name="toast_customize_addon_collection_done">Add-onkolleksje oanpast. Tapassing wurdt ôfsluten om wizigingen ta te passen…</string>
 
+    <!-- Add-on Installation from AMO-->
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is not supported -->
+    <string name="addon_not_supported_error">Add-on wurdt net stipe</string>
+    <!-- Error displayed when user attempts to install an add-on from AMO (addons.mozilla.org) that is already installed -->
+    <string name="addon_already_installed">Add-on is al ynstallearre</string>
+
     <!-- Account Preferences -->
     <!-- Preference for triggering sync -->
     <string name="preferences_sync_now">No syngronisearje</string>
@@ -444,6 +448,10 @@
     <string name="preferences_marketing_data">Marketinggegevens</string>
     <!-- Preference description for marketing data collection, parameter is the app name (e.g. Firefox) -->
     <string name="preferences_marketing_data_description">Dielt gegevens oer hokker funksjes jo yn %1$s brûke mei Leanplum, ús leveransier fan mobile marketing.</string>
+    <!-- Title for studies preferences -->
+    <string name="preference_experiments_2">Undersiken</string>
+    <!-- Summary for studies preferences -->
+    <string name="preference_experiments_summary_2">Stelt Mozilla yn steat om ûndersiken te ynstallearjen en út te fieren</string>
     <!-- Title for experiments preferences -->
     <string name="preference_experiments">Eksperiminten</string>
     <!-- Summary for experiments preferences -->
@@ -715,18 +723,22 @@
     <string name="download_delete_all">Downloads wiskje</string>
     <!-- Text for the dialog to confirm clearing all downloads -->
     <string name="download_delete_all_dialog">Binne jo wis dat jo jo downloads wiskje wolle?</string>
-    <!-- Text for the snackbar to confirm that multiple downloads items have been deleted -->
-    <string name="download_delete_multiple_items_snackbar">Downloads fuortsmiten</string>
+    <!-- Text for the snackbar to confirm that multiple downloads items have been removed -->
+    <string name="download_delete_multiple_items_snackbar_1">Downloads fuortsmiten</string>
+    <!-- Text for the snackbar to confirm that a single download item has been removed. The first parameter is the name of the download item. -->
+    <string name="download_delete_single_item_snackbar">%1$s fuortsmiten</string>
     <!-- Text shown when no download exists -->
-    <string name="download_empty_message">Gjin downloads hjir</string>
+    <string name="download_empty_message_1">Gjin downloade bestannen</string>
     <!-- History multi select title in app bar
     The first parameter is the number of downloads selected -->
     <string name="download_multi_select_title">%1$d selektearre</string>
 
     <!-- History overflow menu open in new tab button -->
     <string name="download_menu_open">Iepenje</string>
-    <!-- Text for the button to delete a single history item -->
-    <string name="download_delete_item">Fuortsmite</string>
+
+
+    <!-- Text for the button to remove a single download item -->
+    <string name="download_delete_item_1">Fuortsmite</string>
 
 
     <!-- Crashes -->
@@ -850,6 +862,8 @@
     <string name="preference_phone_feature_notification">Notifikaasje</string>
     <!-- Preference for altering the persistent storage access for all websites -->
     <string name="preference_phone_feature_persistent_storage">Fêst ûnthâld</string>
+    <!-- Preference for altering the EME access for all websites -->
+    <string name="preference_phone_feature_media_key_system_access">DRM-behearde ynhâld</string>
     <!-- Label that indicates that a permission must be asked always -->
     <string name="preference_option_phone_feature_ask_to_allow">Freegje om tastimming</string>
     <!-- Label that indicates that a permission must be blocked -->

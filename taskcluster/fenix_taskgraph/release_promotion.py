@@ -92,9 +92,7 @@ def is_release_promotion_available(parameters):
             },
             "next_version": {
                 "type": "string",
-                "description": (
-                    "Next version.",
-                ),
+                "description": "Next version.",
                 "default": "",
             },
         },
@@ -154,6 +152,8 @@ def release_promotion_action(parameters, graph_config, input, task_group_id, tas
     if version.is_beta:
         release_type = "beta"
     elif version.is_release:
+        release_type = "release"
+    elif version.is_release_candidate:
         release_type = "release"
     else:
         raise ValueError("Unsupported version type: {}".format(version.version_type))
