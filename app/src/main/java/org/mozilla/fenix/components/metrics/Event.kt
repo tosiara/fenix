@@ -52,6 +52,7 @@ sealed class Event {
     object CustomTabsActionTapped : Event()
     object CustomTabsMenuOpened : Event()
     object UriOpened : Event()
+    object NormalAndPrivateUriOpened : Event()
     object SyncAuthOpened : Event()
     object SyncAuthClosed : Event()
     object SyncAuthSignUp : Event()
@@ -122,6 +123,7 @@ sealed class Event {
     object NotificationMediaPlay : Event()
     object NotificationMediaPause : Event()
     object TopSiteOpenDefault : Event()
+    object TopSiteOpenGoogle : Event()
     object TopSiteOpenFrecent : Event()
     object TopSiteOpenPinned : Event()
     object TopSiteOpenInNewTab : Event()
@@ -168,6 +170,7 @@ sealed class Event {
     object ContextualHintETPOutsideTap : Event()
     object ContextualHintETPInsideTap : Event()
 
+    // Tab tray
     object TabsTrayOpened : Event()
     object TabsTrayClosed : Event()
     object OpenedExistingTab : Event()
@@ -180,6 +183,8 @@ sealed class Event {
     object TabsTraySaveToCollectionPressed : Event()
     object TabsTrayShareAllTabsPressed : Event()
     object TabsTrayCloseAllTabsPressed : Event()
+    object TabsTrayCfrDismissed : Event()
+    object TabsTrayCfrTapped : Event()
 
     object ProgressiveWebAppOpenFromHomescreenTap : Event()
     object ProgressiveWebAppInstallAsShortcut : Event()
@@ -194,12 +199,20 @@ sealed class Event {
     object SyncedTabOpened : Event()
 
     object RecentlyClosedTabsOpened : Event()
+    object HaveOpenTabs : Event()
+    object HaveNoOpenTabs : Event()
 
-    object ContextMenuLongPressTapped : Event()
+    object BannerOpenInAppDisplayed : Event()
+    object BannerOpenInAppDismissed : Event()
+    object BannerOpenInAppGoToSettings : Event()
+
     object ContextMenuCopyTapped : Event()
     object ContextMenuSearchTapped : Event()
     object ContextMenuSelectAllTapped : Event()
     object ContextMenuShareTapped : Event()
+
+    object HaveTopSites : Event()
+    object HaveNoTopSites : Event()
 
     // Interaction events with extras
 
@@ -444,6 +457,7 @@ sealed class Event {
             data class Action(override val engineSource: EngineSource) : EventSource(engineSource)
             data class Widget(override val engineSource: EngineSource) : EventSource(engineSource)
             data class Shortcut(override val engineSource: EngineSource) : EventSource(engineSource)
+            data class TopSite(override val engineSource: EngineSource) : EventSource(engineSource)
             data class Other(override val engineSource: EngineSource) : EventSource(engineSource)
 
             private val label: String
@@ -452,6 +466,7 @@ sealed class Event {
                     is Action -> "action"
                     is Widget -> "widget"
                     is Shortcut -> "shortcut"
+                    is TopSite -> "topsite"
                     is Other -> "other"
                 }
 
@@ -463,7 +478,7 @@ sealed class Event {
         }
 
         enum class SearchAccessPoint {
-            SUGGESTION, ACTION, WIDGET, SHORTCUT, NONE
+            SUGGESTION, ACTION, WIDGET, SHORTCUT, TOPSITE, NONE
         }
 
         override val extras: Map<Events.performedSearchKeys, String>?

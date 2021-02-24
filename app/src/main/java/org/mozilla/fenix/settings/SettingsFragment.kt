@@ -5,6 +5,8 @@
 package org.mozilla.fenix.settings
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.DialogInterface
 import android.content.Intent
@@ -12,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.annotation.VisibleForTesting
@@ -35,7 +38,6 @@ import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.view.showKeyboard
 import org.mozilla.fenix.BrowserDirection
 import org.mozilla.fenix.Config
-import org.mozilla.fenix.FeatureFlags
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.metrics.Event
@@ -334,7 +336,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                             Toast.LENGTH_LONG
                         ).show()
 
-                        Handler().postDelayed({
+                        Handler(Looper.getMainLooper()).postDelayed({
                             exitProcess(0)
                         }, AMO_COLLECTION_OVERRIDE_EXIT_DELAY)
                     }
@@ -359,8 +361,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val debuggingKey = getPreferenceKey(R.string.pref_key_remote_debugging)
         val preferencePrivateBrowsing =
             requirePreference<Preference>(R.string.pref_key_private_browsing)
-        val preferenceExternalDownloadManager =
-            requirePreference<Preference>(R.string.pref_key_external_download_manager)
         val preferenceLeakCanary = findPreference<Preference>(leakKey)
         val preferenceRemoteDebugging = findPreference<Preference>(debuggingKey)
         val preferenceMakeDefaultBrowser =
@@ -380,7 +380,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
-        preferenceExternalDownloadManager.isVisible = FeatureFlags.externalDownloadManager
         preferenceRemoteDebugging?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
         preferenceRemoteDebugging?.setOnPreferenceChangeListener<Boolean> { preference, newValue ->
             preference.context.settings().preferences.edit()
@@ -408,7 +407,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                         getString(R.string.toast_override_fxa_sync_server_done),
                         Toast.LENGTH_LONG
                     ).show()
-                    Handler().postDelayed({
+                    Handler(Looper.getMainLooper()).postDelayed({
                         exitProcess(0)
                     }, FXA_SYNC_OVERRIDE_EXIT_DELAY)
                 }
@@ -426,25 +425,66 @@ class SettingsFragment : PreferenceFragmentCompat() {
         setupAmoCollectionOverridePreference(requireContext().settings())
     }
 
+    /**
+     * For >=Q -> Use new RoleManager API to show in-app browser switching dialog.
+     * For <Q && >=N -> Navigate user to Android Default Apps Settings.
+     * For <N -> Open sumo page to show user how to change default app.
+     */
     private fun getClickListenerForMakeDefaultBrowser(): Preference.OnPreferenceClickListener {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Preference.OnPreferenceClickListener {
-                val intent = Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-                startActivity(intent)
-                true
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                Preference.OnPreferenceClickListener {
+                    requireContext().getSystemService(RoleManager::class.java).also {
+                        if (it.isRoleAvailable(RoleManager.ROLE_BROWSER) && !it.isRoleHeld(
+                                RoleManager.ROLE_BROWSER
+                            )
+                        ) {
+                            startActivityForResult(
+                                it.createRequestRoleIntent(RoleManager.ROLE_BROWSER),
+                                REQUEST_CODE_BROWSER_ROLE
+                            )
+                        } else {
+                            navigateUserToDefaultAppsSettings()
+                        }
+                    }
+                    true
+                }
             }
-        } else {
-            Preference.OnPreferenceClickListener {
-                (activity as HomeActivity).openToBrowserAndLoad(
-                    searchTermOrURL = SupportUtils.getSumoURLForTopic(
-                        requireContext(),
-                        SupportUtils.SumoTopic.SET_AS_DEFAULT_BROWSER
-                    ),
-                    newTab = true,
-                    from = BrowserDirection.FromSettings
-                )
-                true
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> {
+                Preference.OnPreferenceClickListener {
+                    navigateUserToDefaultAppsSettings()
+                    true
+                }
             }
+            else -> {
+                Preference.OnPreferenceClickListener {
+                    (activity as HomeActivity).openToBrowserAndLoad(
+                        searchTermOrURL = SupportUtils.getSumoURLForTopic(
+                            requireContext(),
+                            SupportUtils.SumoTopic.SET_AS_DEFAULT_BROWSER
+                        ),
+                        newTab = true,
+                        from = BrowserDirection.FromSettings
+                    )
+                    true
+                }
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        // If the user made us the default browser, update the switch
+        if (resultCode == Activity.RESULT_OK && requestCode == REQUEST_CODE_BROWSER_ROLE) {
+            updateMakeDefaultBrowserPreference()
+        }
+    }
+
+    private fun navigateUserToDefaultAppsSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val intent = Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            startActivity(intent)
         }
     }
 
@@ -511,6 +551,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     companion object {
+        private const val REQUEST_CODE_BROWSER_ROLE = 1
         private const val SCROLL_INDICATOR_DELAY = 10L
         private const val FXA_SYNC_OVERRIDE_EXIT_DELAY = 2000L
         private const val AMO_COLLECTION_OVERRIDE_EXIT_DELAY = 3000L

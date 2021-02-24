@@ -27,11 +27,13 @@
     <string name="pref_key_delete_cookies_on_quit" translatable="false">pref_key_delete_cookies_on_quit</string>
     <string name="pref_key_delete_caches_on_quit" translatable="false">pref_key_delete_caches_on_quit</string>
     <string name="pref_key_delete_permissions_on_quit" translatable="false">pref_key_delete_permissions_on_quit</string>
+    <string name="pref_key_delete_downloads_on_quit" translatable="false">pref_key_delete_downloads_on_quit</string>
     <string name="pref_key_delete_open_tabs_now" translatable="false">pref_key_delete_open_tabs_now</string>
     <string name="pref_key_delete_browsing_history_now" translatable="false">pref_key_delete_browsing_history_now</string>
     <string name="pref_key_delete_cookies_now" translatable="false">pref_key_delete_cookies_now</string>
     <string name="pref_key_delete_caches_now" translatable="false">pref_key_delete_caches_now</string>
     <string name="pref_key_delete_permissions_now" translatable="false">pref_key_delete_permissions_now</string>
+    <string name="pref_key_delete_downloads_now" translatable="false">pref_key_delete_downloads_now</string>
     <string name="pref_key_delete_browsing_data_on_quit_categories" translatable="false">pref_key_delete_browsing_data_on_quit_categories</string>
     <string name="pref_key_last_known_mode_private" translatable="false">pref_key_last_known_mode_private</string>
     <string name="pref_key_addons" translatable="false">pref_key_addons</string>
@@ -108,6 +110,7 @@
     <string name="pref_key_show_site_exceptions" translatable="false">pref_key_show_site_exceptions</string>
     <string name="pref_key_recommended_settings" translatable="false">pref_key_recommended_settings</string>
     <string name="pref_key_custom_settings" translatable="false">pref_key_custom_settings</string>
+    <string name="pref_key_browser_feature_autoplay" translatable="false">pref_key_browser_feature_autoplay</string>
     <string name="pref_key_browser_feature_autoplay_audible" translatable="false">pref_key_browser_feature_autoplay</string>
     <string name="pref_key_browser_feature_autoplay_inaudible" translatable="false">pref_key_browser_feature_autoplay_inaudible</string>
     <string name="pref_key_browser_feature_persistent_storage" translatable="false">pref_key_browser_feature_persistent_storage</string>
@@ -122,6 +125,9 @@
     <!-- Toolbar Settings -->
     <string name="pref_key_toolbar_top" translatable="false">pref_key_toolbar_top</string>
     <string name="pref_key_toolbar_bottom" translatable="false">pref_key_toolbar_bottom</string>
+
+    <!-- Privacy Pop Window -->
+    <string name="pref_key_privacy_pop_window" translatable="false">pref_key_privacy_pop_window</string>
 
     <!-- Theme Settings -->
     <string name="pref_key_light_theme" translatable="false">pref_key_light_theme</string>
@@ -206,8 +212,6 @@
     <string name="pref_key_migrating_from_firefox_nightly_tip" translatable="false">pref_key_migrating_from_firefox_nightly_tip</string>
     <string name="pref_key_migrating_from_fenix_tip" translatable="false">pref_key_migrating_from_fenix_tip</string>
     <string name="pref_key_master_password_tip" translatable="false">pref_key_master_password_tip</string>
-
-    <string name="pref_key_synced_tabs_tabs_tray" translatable="false">pref_key_synced_tabs_tabs_tray</string>
 
     <string name="pref_key_debug_settings" translatable="false">pref_key_debug_settings</string>
 

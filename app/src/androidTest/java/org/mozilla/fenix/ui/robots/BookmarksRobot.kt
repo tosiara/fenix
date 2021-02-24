@@ -23,18 +23,19 @@ import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withParent
 import androidx.test.espresso.matcher.ViewMatchers.withText
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Until
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.By.res
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiSelector
+import androidx.test.uiautomator.Until
 import org.hamcrest.Matchers.allOf
 import org.hamcrest.Matchers.containsString
 import org.junit.Assert.assertEquals
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
+import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.helpers.click
 import org.mozilla.fenix.helpers.ext.waitNotNull
 
@@ -51,7 +52,7 @@ class BookmarksRobot {
         assertBookmarksView()
     }
 
-    fun verifyEmptyBookmarksList() = assertEmptyBookmarksList()
+    fun verifyDeleteMultipleBookmarksSnackBar() = assertSnackBarText("Bookmarks deleted")
 
     fun verifyBookmarkFavicon(forUrl: Uri) = assertBookmarkFavicon(forUrl)
 
@@ -104,6 +105,10 @@ class BookmarksRobot {
     fun verifySelectDefaultFolderSnackBarText() = assertSnackBarText("Can’t edit default folders")
 
     fun verifyCurrentFolderTitle(title: String) {
+        mDevice.findObject(UiSelector().resourceId("$packageName:id/navigationToolbar")
+            .textContains(title))
+            .waitForExists(waitingTime)
+
         onView(
             allOf(
                 withText(title),
@@ -113,10 +118,25 @@ class BookmarksRobot {
             .check(matches(isDisplayed()))
     }
 
+    fun waitForBookmarksFolderContentToExist(parentFolderName: String, childFolderName: String) {
+        mDevice.findObject(UiSelector().resourceId("$packageName:id/navigationToolbar")
+            .textContains(parentFolderName))
+            .waitForExists(waitingTime)
+
+        mDevice.waitNotNull(Until.findObject(By.text(childFolderName)), waitingTime)
+    }
+
     fun verifySignInToSyncButton() =
         signInToSyncButton().check(matches(withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE)))
 
     fun verifyDeleteFolderConfirmationMessage() = assertDeleteFolderConfirmationMessage()
+
+    fun cancelFolderDeletion() {
+        onView(withText("CANCEL"))
+            .inRoot(RootMatchers.isDialog())
+            .check(matches(isDisplayed()))
+            .click()
+    }
 
     fun createFolder(name: String) {
         clickAddFolderButton()
@@ -189,7 +209,7 @@ class BookmarksRobot {
         }
 
         fun openThreeDotMenu(bookmarkTitle: String, interact: ThreeDotMenuBookmarksRobot.() -> Unit): ThreeDotMenuBookmarksRobot.Transition {
-            mDevice.waitNotNull(Until.findObject(res("org.mozilla.fenix.debug:id/overflow_menu")))
+            mDevice.waitNotNull(Until.findObject(res("$packageName:id/overflow_menu")))
             threeDotMenu(bookmarkTitle).click()
 
             ThreeDotMenuBookmarksRobot().interact()

@@ -7,11 +7,11 @@ package org.mozilla.fenix.home
 import android.animation.Animator
 import android.content.Context
 import android.content.DialogInterface
+import android.content.res.Configuration
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.StrictMode
-import android.view.Display.FLAG_SECURE
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +21,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -63,13 +64,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.appservices.places.BookmarkRoot
 import mozilla.components.browser.menu.view.MenuButton
-import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.concept.storage.FrecencyThresholdOption
 import mozilla.components.concept.sync.AccountObserver
 import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.OAuthAccount
@@ -83,6 +84,7 @@ import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifChanged
 import mozilla.components.ui.tabcounter.TabCounterMenu
 import org.mozilla.fenix.BrowserDirection
+import org.mozilla.fenix.Config
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.BrowserAnimator.Companion.getToolbarNavOptions
@@ -102,8 +104,9 @@ import org.mozilla.fenix.ext.hideToolbar
 import org.mozilla.fenix.ext.metrics
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.requireComponents
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.ext.runIfFragmentIsAttached
+import org.mozilla.fenix.ext.settings
+import org.mozilla.fenix.home.mozonline.showPrivacyPopWindow
 import org.mozilla.fenix.home.sessioncontrol.DefaultSessionControlController
 import org.mozilla.fenix.home.sessioncontrol.SessionControlInteractor
 import org.mozilla.fenix.home.sessioncontrol.SessionControlView
@@ -114,7 +117,6 @@ import org.mozilla.fenix.settings.SupportUtils
 import org.mozilla.fenix.settings.SupportUtils.SumoTopic.HELP
 import org.mozilla.fenix.settings.deletebrowsingdata.deleteAndQuit
 import org.mozilla.fenix.theme.ThemeManager
-import org.mozilla.fenix.utils.FragmentPreDrawManager
 import org.mozilla.fenix.utils.ToolbarPopupWindow
 import org.mozilla.fenix.utils.allowUndo
 import org.mozilla.fenix.whatsnew.WhatsNew
@@ -146,8 +148,6 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private val sessionManager: SessionManager
-        get() = requireComponents.core.sessionManager
     private val store: BrowserStore
         get() = requireComponents.core.store
 
@@ -168,15 +168,23 @@ class HomeFragment : Fragment() {
 
     private val topSitesFeature = ViewBoundFeatureWrapper<TopSitesFeature>()
 
+    @VisibleForTesting
+    internal var getMenuButton: () -> MenuButton? = { menuButton }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        postponeEnterTransition()
         bundleArgs = args.toBundle()
         lifecycleScope.launch(IO) {
             if (!onboarding.userHasBeenOnboarded()) {
                 requireComponents.analytics.metrics.track(Event.OpenedAppFirstRun)
             }
+        }
+
+        if (!onboarding.userHasBeenOnboarded() &&
+            requireContext().settings().shouldShowPrivacyPopWindow &&
+            Config.channel.isMozillaOnline) {
+            showPrivacyPopWindow(requireContext(), requireActivity())
         }
     }
 
@@ -226,7 +234,7 @@ class HomeFragment : Fragment() {
                 storage = components.core.topSitesStorage,
                 config = ::getTopSitesConfig
             ),
-            owner = this,
+            owner = viewLifecycleOwner,
             view = view
         )
 
@@ -237,11 +245,11 @@ class HomeFragment : Fragment() {
                 engine = components.core.engine,
                 metrics = components.analytics.metrics,
                 store = store,
-                sessionManager = sessionManager,
                 tabCollectionStorage = components.core.tabCollectionStorage,
                 addTabUseCase = components.useCases.tabsUseCases.addTab,
                 restoreUseCase = components.useCases.tabsUseCases.restore,
                 reloadUrlUseCase = components.useCases.sessionUseCases.reload,
+                selectTabUseCase = components.useCases.tabsUseCases.selectTab,
                 fragmentStore = homeFragmentStore,
                 navController = findNavController(),
                 viewLifecycleScope = viewLifecycleOwner.lifecycleScope,
@@ -269,6 +277,12 @@ class HomeFragment : Fragment() {
         return view
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        getMenuButton()?.dismissMenu()
+    }
+
     private fun dismissTip(tip: Tip) {
         sessionControlInteractor.onCloseTip(tip)
     }
@@ -277,9 +291,13 @@ class HomeFragment : Fragment() {
      * Returns a [TopSitesConfig] which specifies how many top sites to display and whether or
      * not frequently visited sites should be displayed.
      */
-    private fun getTopSitesConfig(): TopSitesConfig {
+    @VisibleForTesting
+    internal fun getTopSitesConfig(): TopSitesConfig {
         val settings = requireContext().settings()
-        return TopSitesConfig(settings.topSitesMaxLimit, settings.showTopFrecentSites)
+        return TopSitesConfig(
+            settings.topSitesMaxLimit,
+            if (settings.showTopFrecentSites) FrecencyThresholdOption.SKIP_ONE_TIME_PAGES else null
+        )
     }
 
     /**
@@ -341,15 +359,7 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        FragmentPreDrawManager(this).execute {
-            homeViewModel.layoutManagerState?.also { parcelable ->
-                sessionControlView!!.view.layoutManager?.onRestoreInstanceState(parcelable)
-            }
-            homeViewModel.layoutManagerState = null
-        }
-
         observeSearchEngineChanges()
-
         createHomeMenu(requireContext(), WeakReference(view.menuButton))
         createTabCounterMenu(view)
 
@@ -396,12 +406,6 @@ class HomeFragment : Fragment() {
             }
         }
 
-        if (browsingModeManager.mode.isPrivate) {
-            requireActivity().window.addFlags(FLAG_SECURE)
-        } else {
-            requireActivity().window.clearFlags(FLAG_SECURE)
-        }
-
         consumeFrom(requireComponents.core.store) {
             updateTabCounter(it)
         }
@@ -437,7 +441,8 @@ class HomeFragment : Fragment() {
                     if (searchEngine != null) {
                         val iconSize =
                             requireContext().resources.getDimensionPixelSize(R.dimen.preference_icon_drawable_size)
-                        val searchIcon = BitmapDrawable(requireContext().resources, searchEngine.icon)
+                        val searchIcon =
+                            BitmapDrawable(requireContext().resources, searchEngine.icon)
                         searchIcon.setBounds(0, 0, iconSize, iconSize)
                         search_engine_icon?.setImageDrawable(searchIcon)
                     } else {
@@ -483,9 +488,9 @@ class HomeFragment : Fragment() {
 
     private fun removeAllTabsAndShowSnackbar(sessionCode: String) {
         if (sessionCode == ALL_PRIVATE_TABS) {
-            sessionManager.removePrivateSessions()
+            requireComponents.useCases.tabsUseCases.removePrivateTabs()
         } else {
-            sessionManager.removeNormalSessions()
+            requireComponents.useCases.tabsUseCases.removeNormalTabs()
         }
 
         val snackbarMessage = if (sessionCode == ALL_PRIVATE_TABS) {
@@ -539,7 +544,6 @@ class HomeFragment : Fragment() {
         sessionControlView = null
         appBarLayout = null
         bundleArgs.clear()
-        requireActivity().window.clearFlags(FLAG_SECURE)
     }
 
     override fun onStart() {
@@ -652,12 +656,6 @@ class HomeFragment : Fragment() {
             }
             create()
         }.show()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        homeViewModel.layoutManagerState =
-            sessionControlView!!.view.layoutManager?.onSaveInstanceState()
     }
 
     override fun onResume() {
@@ -1025,7 +1023,6 @@ class HomeFragment : Fragment() {
     // https://github.com/mozilla-mobile/fenix/issues/16792
     private fun updateTabCounter(browserState: BrowserState) {
         val tabCount = if (browsingModeManager.mode.isPrivate) {
-            view?.tab_button?.setColor(ContextCompat.getColor(requireContext(), R.color.primary_text_private_theme))
             browserState.privateTabs.size
         } else {
             browserState.normalTabs.size
